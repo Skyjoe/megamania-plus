@@ -459,32 +459,50 @@
                 if (!sfxEnabled || !this.ctx) return;
                 try {
                     const osc = this.ctx.createOscillator();
+                    const filter = this.ctx.createBiquadFilter();
                     const gain = this.ctx.createGain();
+
                     osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(750, this.ctx.currentTime);
-                    osc.frequency.exponentialRampToValueAtTime(120, this.ctx.currentTime + 0.12);
-                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
-                    osc.connect(gain);
+                    osc.frequency.setValueAtTime(620, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(140, this.ctx.currentTime + 0.09);
+
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(950, this.ctx.currentTime); // Filtra frequências estridentes acima de 950Hz
+
+                    gain.gain.setValueAtTime(0.10, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.09);
+
+                    osc.connect(filter);
+                    filter.connect(gain);
                     gain.connect(this.ctx.destination);
+
                     osc.start();
-                    osc.stop(this.ctx.currentTime + 0.12);
+                    osc.stop(this.ctx.currentTime + 0.09);
                 } catch(e){}
             }
             playSpecialLaser() {
                 if (!sfxEnabled || !this.ctx) return;
                 try {
                     const osc = this.ctx.createOscillator();
+                    const filter = this.ctx.createBiquadFilter();
                     const gain = this.ctx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(1100, this.ctx.currentTime);
-                    osc.frequency.linearRampToValueAtTime(300, this.ctx.currentTime + 0.14);
-                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.14);
-                    osc.connect(gain);
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(820, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(180, this.ctx.currentTime + 0.11);
+
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1150, this.ctx.currentTime); // Filtro passa-baixas aveludado para o tiro especial
+
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.11);
+
+                    osc.connect(filter);
+                    filter.connect(gain);
                     gain.connect(this.ctx.destination);
+
                     osc.start();
-                    osc.stop(this.ctx.currentTime + 0.14);
+                    osc.stop(this.ctx.currentTime + 0.11);
                 } catch(e){}
             }
             playPowerupPickup() {
