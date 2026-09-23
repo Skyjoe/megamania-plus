@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Megamania Plus</title>
+    <title>Megamania Plus - Neon Modern Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@600;700&display=swap');
@@ -70,16 +70,16 @@
     <!-- Container Principal -->
     <div class="relative flex flex-col items-center justify-center w-full max-w-2xl h-full max-h-[950px] arcade-panel rounded-2xl p-2 sm:p-3 border border-cyan-500/30 overflow-hidden">
         
-        <!-- Header / HUD Superior -->
-        <div class="w-full flex justify-between items-center px-4 py-2 mb-2 bg-slate-900/85 rounded-xl border border-white/10 z-10">
+        <!-- Header / HUD Superior (Oculto fora da partida) -->
+        <div id="top-hud" class="w-full flex justify-between items-center px-4 py-2 mb-2 bg-slate-900/85 rounded-xl border border-white/10 z-10 hidden">
             <div class="flex flex-col">
                 <span class="text-[10px] sm:text-xs text-cyan-400 font-bold uppercase tracking-wider">Pontuação</span>
                 <span id="score-display" class="arcade-font text-base sm:text-xl text-yellow-400">000000</span>
             </div>
 
             <!-- Indicador de Power-up Ativo -->
-            <div id="powerup-hud" class="flex flex-col items-center min-w-[120px] transition-opacity duration-200 opacity-30">
-                <span id="powerup-name" class="arcade-font text-[10px] sm:text-[12px] text-yellow-300 font-extrabold tracking-wider">PADRÃO</span>
+            <div id="powerup-hud" class="flex flex-col items-center min-w-[120px] transition-opacity duration-200 opacity-80">
+                <span id="powerup-name" class="arcade-font text-[10px] sm:text-[12px] text-cyan-400 font-extrabold tracking-wider">✦ PADRÃO</span>
                 <div class="w-24 sm:w-28 h-2.5 bg-slate-800 rounded-full overflow-hidden mt-1 border border-white/30 shadow-inner">
                     <div id="powerup-bar" class="h-full bg-gradient-to-r from-yellow-400 to-amber-500 w-0 transition-all"></div>
                 </div>
@@ -88,6 +88,12 @@
             <div class="flex flex-col items-center">
                 <span class="text-[10px] sm:text-xs text-purple-400 font-bold uppercase tracking-wider">Fase</span>
                 <span id="stage-display" class="arcade-font text-sm sm:text-lg text-purple-300">01</span>
+            </div>
+
+            <!-- Controles Mute / Som no HUD -->
+            <div class="flex items-center gap-1.5">
+                <button id="hud-toggle-sfx" title="Efeitos Sonoros" class="px-2 py-1 text-[10px] sm:text-xs bg-slate-800 hover:bg-slate-700 border border-cyan-500/40 rounded-lg text-cyan-300 cursor-pointer transition-all active:scale-95">🔊 SFX</button>
+                <button id="hud-toggle-music" title="Música mega.mp3" class="px-2 py-1 text-[10px] sm:text-xs bg-slate-800 hover:bg-slate-700 border border-purple-500/40 rounded-lg text-purple-300 cursor-pointer transition-all active:scale-95">🎵 MÚSICA</button>
             </div>
 
             <div class="flex flex-col items-end">
@@ -103,9 +109,9 @@
             <!-- Tela Inicial -->
             <div id="start-overlay" class="absolute inset-0 bg-slate-950/92 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 transition-opacity duration-300">
                 <h1 class="arcade-font text-2xl sm:text-4xl text-cyan-400 neon-text-cyan mb-1 tracking-wider">MEGAMANIA PLUS</h1>
-                <p class="text-xs sm:text-sm text-cyan-200/70 mb-4 uppercase tracking-widest">Alien Assault & Boss Battles</p>
+                <p class="text-xs sm:text-sm text-cyan-200/70 mb-3 uppercase tracking-widest">Alien Assault & Boss Battles</p>
                 
-                <div class="bg-slate-900/90 p-3.5 rounded-xl border border-white/10 mb-5 max-w-sm text-left text-xs sm:text-sm text-slate-300 space-y-1.5 shadow-lg">
+                <div class="bg-slate-900/90 p-3.5 rounded-xl border border-white/10 mb-3 max-w-sm text-left text-xs sm:text-sm text-slate-300 space-y-1.5 shadow-lg">
                     <p class="text-yellow-400 font-bold mb-1">✦ COMO JOGAR:</p>
                     <p>• <b class="text-white">Mover:</b> Teclas ◄ ► ou A / D</p>
                     <p>• <b class="text-white">Tiro Contínuo:</b> Segure <b class="text-cyan-300">ESPAÇO</b></p>
@@ -212,6 +218,49 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configurações Globais de Som e Música
+        let sfxEnabled = true;
+        let musicEnabled = true;
+
+        // Player de Trilha Sonora
+        const bgMusic = new Audio('mega.mp3');
+        bgMusic.loop = true;
+        bgMusic.volume = 0.3; // Volume ajustado para 30% do total
+
+        function updateAudioUI() {
+            const hudSfx = document.getElementById('hud-toggle-sfx');
+            const hudMusic = document.getElementById('hud-toggle-music');
+
+            if (hudSfx) {
+                hudSfx.innerText = sfxEnabled ? '🔊 SFX' : '🔇 SFX';
+                hudSfx.className = `px-2 py-1 text-[10px] sm:text-xs ${sfxEnabled ? 'bg-slate-800 text-cyan-300 border-cyan-500/40' : 'bg-red-950/80 text-red-400 border-red-500/40'} border rounded-lg cursor-pointer transition-all active:scale-95`;
+            }
+            if (hudMusic) {
+                hudMusic.innerText = musicEnabled ? '🎵 MÚSICA' : '🔇 MÚSICA';
+                hudMusic.className = `px-2 py-1 text-[10px] sm:text-xs ${musicEnabled ? 'bg-slate-800 text-purple-300 border-purple-500/40' : 'bg-red-950/80 text-red-400 border-red-500/40'} border rounded-lg cursor-pointer transition-all active:scale-95`;
+            }
+        }
+
+        function toggleSFX() {
+            sfxEnabled = !sfxEnabled;
+            updateAudioUI();
+        }
+
+        function toggleMusic() {
+            musicEnabled = !musicEnabled;
+            if (musicEnabled) {
+                if (gameState === 'PLAYING') {
+                    bgMusic.play().catch(() => {});
+                }
+            } else {
+                bgMusic.pause();
+            }
+            updateAudioUI();
+        }
+
+        document.getElementById('hud-toggle-sfx')?.addEventListener('click', toggleSFX);
+        document.getElementById('hud-toggle-music')?.addEventListener('click', toggleMusic);
 
         // Firebase Persistence Setup
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'megamania-arcade-game';
@@ -379,6 +428,7 @@
         const gameoverOverlay = document.getElementById('gameover-overlay');
         const pauseOverlay = document.getElementById('pause-overlay');
         const rankingModal = document.getElementById('ranking-modal');
+        const topHud = document.getElementById('top-hud');
         const btnStart = document.getElementById('btn-start');
         const btnRestart = document.getElementById('btn-restart');
         const btnShowRanking = document.getElementById('btn-show-ranking');
@@ -406,7 +456,7 @@
                 }
             }
             playLaser() {
-                if (!this.ctx) return;
+                if (!sfxEnabled || !this.ctx) return;
                 try {
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
@@ -422,7 +472,7 @@
                 } catch(e){}
             }
             playSpecialLaser() {
-                if (!this.ctx) return;
+                if (!sfxEnabled || !this.ctx) return;
                 try {
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
@@ -438,7 +488,7 @@
                 } catch(e){}
             }
             playPowerupPickup() {
-                if (!this.ctx) return;
+                if (!sfxEnabled || !this.ctx) return;
                 try {
                     const notes = [523.25, 659.25, 783.99, 1046.50];
                     notes.forEach((freq, index) => {
@@ -457,7 +507,7 @@
                 } catch(e){}
             }
             playEnemyHit() {
-                if (!this.ctx) return;
+                if (!sfxEnabled || !this.ctx) return;
                 try {
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
@@ -473,7 +523,7 @@
                 } catch(e){}
             }
             playSpecialEnemyHit() {
-                if (!this.ctx) return;
+                if (!sfxEnabled || !this.ctx) return;
                 try {
                     const notes = [587.33, 739.99, 880.00, 1174.66]; // D5, F#5, A5, D6 - Arpejo de celebração
                     notes.forEach((freq, index) => {
@@ -492,7 +542,7 @@
                 } catch(e){}
             }
             playVictoryJingle() {
-                if (!this.ctx) return;
+                if (!sfxEnabled || !this.ctx) return;
                 try {
                     // Fanfarrada de vitória de ~3 segundos
                     const melody = [
@@ -520,7 +570,7 @@
                 } catch(e){}
             }
             playPlayerExplosion() {
-                if (!this.ctx) return;
+                if (!sfxEnabled || !this.ctx) return;
                 try {
                     const bufferSize = this.ctx.sampleRate * 0.85;
                     const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
@@ -658,9 +708,11 @@
             if (gameState === 'PLAYING') {
                 gameState = 'PAUSED';
                 pauseOverlay.classList.remove('hidden');
+                bgMusic.pause();
             } else if (gameState === 'PAUSED') {
                 gameState = 'PLAYING';
                 pauseOverlay.classList.add('hidden');
+                if (musicEnabled) bgMusic.play().catch(() => {});
             }
         }
 
@@ -1185,6 +1237,8 @@
 
                     if (lives <= 0) {
                         gameState = 'GAMEOVER';
+                        bgMusic.pause();
+                        if (topHud) topHud.classList.add('hidden');
                         lastGameScore = score; // Captura e congela a pontuação final da partida
                         finalScoreDisplay.innerText = String(score).padStart(6, '0');
                         hasSavedScoreThisGame = false;
@@ -1886,7 +1940,7 @@
 
         function updatePowerupHUD() {
             if (player.activePowerup && player.powerupTimer > 0) {
-                powerupHud.classList.remove('opacity-30');
+                powerupHud.classList.remove('opacity-80');
                 powerupHud.classList.add('opacity-100');
                 powerupName.innerText = player.activePowerup.name;
                 powerupName.style.color = player.activePowerup.color;
@@ -1895,16 +1949,20 @@
                 powerupBar.style.width = `${percent}%`;
                 powerupBar.style.background = player.activePowerup.color;
             } else {
-                powerupHud.classList.add('opacity-30');
                 powerupHud.classList.remove('opacity-100');
-                powerupName.innerText = 'PADRÃO';
-                powerupName.style.color = '#cbd5e1';
+                powerupHud.classList.add('opacity-80');
+                powerupName.innerText = '✦ PADRÃO';
+                powerupName.style.color = '#00f0ff';
                 powerupBar.style.width = '0%';
             }
         }
 
         function startGame() {
             audio.init();
+            if (musicEnabled) {
+                bgMusic.currentTime = 0;
+                bgMusic.play().catch(e => console.log('Playing mega.mp3:', e));
+            }
             score = 0;
             lives = 3;
             stage = 1;
@@ -1920,6 +1978,7 @@
             floatingTexts = [];
             hasSavedScoreThisGame = false;
             
+            if (topHud) topHud.classList.remove('hidden');
             updateHUD();
             updatePowerupHUD();
             spawnEnemyWave();
